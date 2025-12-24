@@ -14,6 +14,7 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
+#include <time.h>
 
 /* ============================================================================
  * File I/O Functions - Hexadecimal parsing and writing
@@ -251,35 +252,39 @@ int is_prime(uint32_t n) {
 }
 
 /*
+ * Generate a random prime number in the given range [min, max]
+ */
+uint32_t random_prime(uint32_t min, uint32_t max) {
+    uint32_t candidate;
+    do {
+        candidate = min + (rand() % (max - min + 1));
+        /* Make it odd if even */
+        if (candidate % 2 == 0) {
+            candidate++;
+            if (candidate > max) candidate = min + 1;
+        }
+    } while (!is_prime(candidate));
+    return candidate;
+}
+
+/*
  * Generate RSA key pair
- * Uses fixed primes for reproducibility (toy implementation)
+ * Uses randomized primes for each call
  */
 int rsa_generate_keys(const char *public_key_file, const char *private_key_file) {
-    /* Use two 16-bit primes to get a 32-bit modulus */
-    /* p = 349, q = 357 would give N = 124593, but let's use the example values */
-    /* From example: N = 0x1E709 = 124681 */
-    /* Factoring: 124681 = 353 * 353 = 353^2? No... 
-     * Let's find factors: 124681 / 353 = 353.1... not exact
-     * Try: 124681 = 349 * 357? = 124593 (close but not exact)
-     * 124681 = 7 * 17809? Let's just use known working primes */
+    /* Seed random number generator with current time */
+    srand((unsigned int)time(NULL));
     
-    /* Use primes that give N = 124681 (0x1E709) */
-    /* 124681 = 11 * 11 * 1031? No...
-     * Let me factor 124681: sqrt(124681) ≈ 353
-     * 124681 / 349 = 357.25... 
-     * Actually for the example to work, let's just use primes that work */
+    /* Generate two random 16-bit primes to get a 32-bit modulus */
+    /* Range: 256 to 65535 (for reasonable 16-bit primes) */
+    uint32_t p = random_prime(256, 65535);
+    uint32_t q;
+    do {
+        q = random_prime(256, 65535);
+    } while (q == p);  /* Ensure p and q are different */
     
-    /* For simplicity, let's use p = 353 and q = 353 (same prime, just for demo) 
-     * No wait, that breaks RSA. Let me use different primes. */
-    
-    /* Using p = 349 and q = 359 gives N = 125291 */
-    /* Let's just generate proper keys */
-    
-    uint32_t p = 349;  /* Prime 1 */
-    uint32_t q = 359;  /* Prime 2 */
-    
-    uint32_t N = p * q;                    /* N = 125291 */
-    uint32_t phi = (p - 1) * (q - 1);      /* phi(N) = 348 * 358 = 124584 */
+    uint32_t N = p * q;                    /* N = p * q */
+    uint32_t phi = (p - 1) * (q - 1);      /* phi(N) = (p-1) * (q-1) */
     uint32_t e = 257;                      /* Common choice: 0x101 */
     
     /* Ensure gcd(e, phi) = 1 */
