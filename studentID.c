@@ -14,7 +14,6 @@
 #include <stdint.h>
 #include <stdlib.h>
 #include <string.h>
-#include <time.h>
 
 /* ============================================================================
  * File I/O Functions - Hexadecimal parsing and writing
@@ -296,31 +295,20 @@ int rsa_generate_keys(const char *public_key_file, const char *private_key_file)
     uint32_t d = mod_inverse(e, phi);
     
     if (d == 0) {
-        fprintf(stderr, "Error: Could not compute private key\n");
         return -1;
     }
     
     /* Write public key (e, N) */
     uint32_t public_key[2] = {e, N};
     if (write_hex_file(public_key_file, public_key, 2) != 0) {
-        fprintf(stderr, "Error: Could not write public key file\n");
         return -1;
     }
     
     /* Write private key (d, N) */
     uint32_t private_key[2] = {d, N};
     if (write_hex_file(private_key_file, private_key, 2) != 0) {
-        fprintf(stderr, "Error: Could not write private key file\n");
         return -1;
     }
-    
-    printf("Key generation successful!\n");
-    printf("  p = %u (0x%X)\n", p, p);
-    printf("  q = %u (0x%X)\n", q, q);
-    printf("  N = %u (0x%X)\n", N, N);
-    printf("  phi(N) = %u\n", phi);
-    printf("  e = %u (0x%X)\n", e, e);
-    printf("  d = %u (0x%X)\n", d, d);
     
     return 0;
 }
@@ -335,7 +323,6 @@ int rsa_encrypt(const char *public_key_file, const char *plaintext_file,
     
     /* Read public key */
     if (read_hex_file(public_key_file, key, 2) != 2) {
-        fprintf(stderr, "Error: Could not read public key file\n");
         return -1;
     }
     
@@ -344,16 +331,13 @@ int rsa_encrypt(const char *public_key_file, const char *plaintext_file,
     
     /* Read plaintext */
     if (read_hex_file(plaintext_file, plaintext, 1) != 1) {
-        fprintf(stderr, "Error: Could not read plaintext file\n");
         return -1;
     }
     
     uint32_t P = plaintext[0];
     
     /* Check that plaintext < N */
-    /* Max N = 0x0001E96B */
     if (P >= N) {
-        fprintf(stderr, "Error: Plaintext must be less than N\n");
         return -1;
     }
     
@@ -362,13 +346,8 @@ int rsa_encrypt(const char *public_key_file, const char *plaintext_file,
     
     /* Write ciphertext */
     if (write_hex_file(ciphertext_file, &C, 1) != 0) {
-        fprintf(stderr, "Error: Could not write ciphertext file\n");
         return -1;
     }
-    
-    printf("Encryption successful!\n");
-    printf("  P = 0x%08X\n", P);
-    printf("  C = 0x%08X\n", C);
     
     return 0;
 }
@@ -383,7 +362,6 @@ int rsa_decrypt(const char *private_key_file, const char *ciphertext_file,
     
     /* Read private key */
     if (read_hex_file(private_key_file, key, 2) != 2) {
-        fprintf(stderr, "Error: Could not read private key file\n");
         return -1;
     }
     
@@ -392,7 +370,6 @@ int rsa_decrypt(const char *private_key_file, const char *ciphertext_file,
     
     /* Read ciphertext */
     if (read_hex_file(ciphertext_file, ciphertext, 1) != 1) {
-        fprintf(stderr, "Error: Could not read ciphertext file\n");
         return -1;
     }
     
@@ -403,13 +380,8 @@ int rsa_decrypt(const char *private_key_file, const char *ciphertext_file,
     
     /* Write plaintext */
     if (write_hex_file(plaintext_file, &P, 1) != 0) {
-        fprintf(stderr, "Error: Could not write plaintext file\n");
         return -1;
     }
-    
-    printf("Decryption successful!\n");
-    printf("  C = 0x%08X\n", C);
-    printf("  P = 0x%08X\n", P);
     
     return 0;
 }
@@ -418,12 +390,6 @@ int rsa_decrypt(const char *private_key_file, const char *ciphertext_file,
  * Main Function
  * ============================================================================ */
 
-void print_usage(const char *program_name) {
-    printf("Usage:\n");
-    printf("  %s \"g\" <public_key.txt> <private_key.txt>\n", program_name);
-    printf("  %s \"e\" <public_key.txt> <plaintext.txt> <ciphertext.txt>\n", program_name);
-    printf("  %s \"d\" <private_key.txt> <ciphertext.txt> <plaintext.txt>\n", program_name);
-}
 
 int main(int argc, char *argv[]) {
     if (argc < 2) {
@@ -438,8 +404,6 @@ int main(int argc, char *argv[]) {
         case 'G':
             /* Key Generation */
             if (argc != 4) {
-                fprintf(stderr, "Error: Key generation requires 2 file arguments\n");
-                print_usage(argv[0]);
                 return 1;
             }
             return rsa_generate_keys(argv[2], argv[3]);
@@ -448,8 +412,6 @@ int main(int argc, char *argv[]) {
         case 'E':
             /* Encryption */
             if (argc != 5) {
-                fprintf(stderr, "Error: Encryption requires 3 file arguments\n");
-                print_usage(argv[0]);
                 return 1;
             }
             return rsa_encrypt(argv[2], argv[3], argv[4]);
@@ -458,15 +420,11 @@ int main(int argc, char *argv[]) {
         case 'D':
             /* Decryption */
             if (argc != 5) {
-                fprintf(stderr, "Error: Decryption requires 3 file arguments\n");
-                print_usage(argv[0]);
                 return 1;
             }
             return rsa_decrypt(argv[2], argv[3], argv[4]);
             
         default:
-            fprintf(stderr, "Error: Unknown mode '%c'\n", mode);
-            print_usage(argv[0]);
             return 1;
     }
     
